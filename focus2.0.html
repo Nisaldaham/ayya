@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusPal - Study App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for "Inter" font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 900px;
+        }
+        .text-shadow {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .page.hidden {
+            display: none;
+        }
+        .custom-message-box {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 1rem 2rem;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .custom-message-box.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 30px;
+            height: 30px;
+            -webkit-animation: spin 2s linear infinite;
+            animation: spin 2s linear infinite;
+            margin: 0 auto;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* --- ANIMATIONS FOR GALAXY PLAN --- */
+        @keyframes starGlow {
+            0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 255, 0, 0.8)) drop-shadow(0 0 10px rgba(255, 200, 0, 0.5)); }
+            50% { filter: drop-shadow(0 0 8px rgba(255, 255, 150, 1)) drop-shadow(0 0 15px rgba(255, 255, 0, 0.8)); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: none; }
+            50% { transform: scale(1.015); box-shadow: 0 4px 15px rgba(100, 100, 255, 0.3); }
+        }
+        .achievement-row {
+            /* Applied to the main row for a subtle pulse */
+            animation: pulse 3s infinite ease-in-out;
+            border-color: #a855f7 !important; /* Purple border for achievement */
+            background-color: #f5f3ff; /* Light purple background */
+        }
+        .star-icon-glow {
+            /* Applied to the star itself for a glow effect */
+            animation: starGlow 2.5s infinite alternate;
+        }
+        /* ------------------------------------- */
+
+        /* --- NEW iOS Style --- */
+        #timer-container {
+            background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80') no-repeat center center/cover;
+            position: relative;
+            overflow: hidden;
+        }
+        #timer-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3); /* Dark overlay for better text visibility */
+            z-index: 1;
+        }
+        #timer-display, #session-label {
+            position: relative;
+            z-index: 2;
+        }
+        #timer-display {
+            font-weight: 700; /* Bolder font */
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5); /* Softer, more modern shadow */
+        }
+
+        /* --- Modern UI Elements --- */
+        .bg-gray-50 {
+            background-color: #ffffff; /* Cleaner white background for cards */
+            border-radius: 1.5rem; /* Softer, more modern corners */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07); /* Softer, deeper shadow */
+            border: 1px solid #e5e7eb;
+        }
+        .nav-btn, #add-task-btn, #youtube-start-btn, #youtube-stop-btn, #set-reminder-btn, #add-manual-time-btn, #add-subject-btn {
+            border-radius: 9999px; /* Fully rounded buttons */
+            transition: all 0.2s ease-in-out;
+            font-weight: 600;
+        }
+        .nav-btn:hover, #add-task-btn:hover, #youtube-start-btn:hover, #youtube-stop-btn:hover, #set-reminder-btn:hover, #add-manual-time-btn:hover, #add-subject-btn:hover {
+            transform: translateY(-2px); /* Subtle lift on hover */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- Overall Aesthetics --- */
+        body {
+            background: linear-gradient(to right, #e0eafc, #cfdef3); /* Subtle gradient background */
+            font-family: 'Inter', sans-serif;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.85); /* Frosted glass effect */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px); /* For Safari */
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+        }
+        p, span, div, button, input, select, label, li, ul {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* --- Galaxy Plan & Scheduler Redesign --- */
+        #daily-study-chart-container, #progress-summary, .bg-indigo-50, .bg-white {
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+            border: 1px solid #e5e7eb;
+        }
+        input[type="date"], input[type="number"], input[type="text"], input[type="time"], select {
+            border-radius: 1rem;
+            border: 1px solid #d1d5db;
+            transition: all 0.2s ease-in-out;
+        }
+        input:focus, select:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+            border-color: #6366f1;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 md:p-8">
+
+    <!-- Custom Message Box -->
+    <div id="custom-message" class="custom-message-box"></div>
+
+    <!-- Main App Container -->
+    <div class="container w-full bg-white rounded-3xl shadow-2xl overflow-hidden p-8 space-y-8">
+
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-4xl font-extrabold text-gray-800">FocusPal</h1>
+            <p id="status-text" class="text-xl text-gray-500">Time to focus!</p>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex justify-center mb-8 space-x-4">
+            <button data-page="dashboard" class="nav-btn px-6 py-2 rounded-full font-semibold transition-colors duration-200 bg-gray-400 text-white">
+                Dashboard
+            </button>
+            <button data-page="galaxy-plan" class="nav-btn px-6 py-2 rounded-full font-semibold transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300">
+                Galaxy Plan
+            </button>
+            <!-- NEW NAVIGATION BUTTON -->
+            <button data-page="scheduler" class="nav-btn px-6 py-2 rounded-full font-semibold transition-colors duration-200 bg-gray-200 text-gray-700 hover:bg-gray-300">
+                Scheduler
+            </button>
+        </nav>
+
+        <!-- Main Dashboard Page -->
+        <div id="dashboard-page" class="page space-y-8">
+            <!-- Pomodoro Timer Section -->
+            <div id="timer-container" class="text-white rounded-2xl p-6 text-center shadow-lg">
+                <p id="timer-display" class="text-6xl md:text-8xl font-mono font-bold tracking-wider">
+                    25:00
+                </p>
+                <p id="session-label" class="mt-2 text-lg opacity-80">
+                    Work Session
+                </p>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="flex flex-col md:flex-row justify-center space-y-4 md:space-y-0 md:space-x-4">
+                <!-- Timer Buttons -->
+                <button id="start-pause-btn" class="px-8 py-3 rounded-full font-semibold transition-transform duration-200 transform hover:scale-105 shadow-md bg-green-500 text-white hover:bg-green-600">
+                    Start
+                </button>
+                <button id="reset-btn" class="px-8 py-3 rounded-full font-semibold transition-transform duration-200 transform hover:scale-105 shadow-md bg-gray-200 text-gray-700 hover:bg-gray-300">
+                    Reset
+                </button>
+                
+                <!-- Custom Duration Inputs -->
+                <div class="flex items-center space-x-2 bg-gray-100 p-2 rounded-xl">
+                    <label for="work-duration" class="text-sm font-medium text-gray-700">Work (min):</label>
+                    <input type="number" id="work-duration" value="25" min="1" class="w-16 text-center p-2 rounded-lg border border-gray-300">
+                </div>
+                <div class="flex items-center space-x-2 bg-gray-100 p-2 rounded-xl">
+                    <label for="break-duration" class="text-sm font-medium text-gray-700">Break (min):</label>
+                    <input type="number" id="break-duration" value="5" min="1" class="w-16 text-center p-2 rounded-lg border border-gray-300">
+                </div>
+            </div>
+
+            <!-- Features & Nudges Section (now a 2x2 grid) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                <!-- Progress Tracking -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+                    <h3 class="text-xl font-bold mb-4 text-center text-gray-800">Your Study Progress</h3>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <p id="sessions-completed" class="text-4xl font-bold text-indigo-600">0</p>
+                            <p class="text-gray-500 text-sm mt-1">Sessions</p>
+                        </div>
+                        <div>
+                            <p id="points-earned" class="text-4xl font-bold text-green-600">0</p>
+                            <p class="text-gray-500 text-sm mt-1">Points</p>
+                        </div>
+                        <div>
+                            <p id="streak" class="text-4xl font-bold text-purple-600">0</p>
+                            <p class="text-gray-500 text-sm mt-1">Day Streak</p>
+                        </div>
+                    </div>
+                    <!-- Level System UI -->
+                    <div class="mt-6 text-center">
+                        <h4 class="text-lg font-semibold text-gray-800">Level <span id="level-display">1</span></h4>
+                        <div class="w-full bg-gray-200 rounded-full h-4 mt-2 overflow-hidden border border-gray-300">
+                            <div id="xp-progress-bar" class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1"><span id="xp-display">0</span> / <span id="xp-next-level-display">1000</span> XP</p>
+                    </div>
+                </div>
+
+                <!-- To-Do List for Exams -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+                    <h3 class="text-xl font-bold mb-4 text-center text-gray-800">Exam Topics</h3>
+                    <div class="flex mb-4 space-x-2">
+                        <input type="text" id="new-task-input" placeholder="Add a new topic..." class="flex-1 p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="add-task-btn" class="px-6 py-2 rounded-xl bg-blue-500 text-white font-semibold transition-transform duration-200 transform hover:scale-105 hover:bg-blue-600">
+                            Add
+                        </button>
+                    </div>
+                    <ul id="task-list" class="space-y-2">
+                        <!-- Tasks will be inserted here by JavaScript -->
+                    </ul>
+                </div>
+                
+                <!-- YouTube Timer and Reminders Section -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-inner text-center">
+                    <h3 class="text-xl font-bold mb-2 text-gray-800">YouTube Study Timer</h3>
+                    <p class="text-sm text-gray-500 mb-4">Manually track time spent on educational videos.</p>
+                    <p id="youtube-timer-display" class="text-4xl font-mono font-bold text-indigo-600">00:00</p>
+                    <div class="flex justify-center space-x-4 mt-4">
+                        <button id="youtube-start-btn" class="px-6 py-2 rounded-full bg-indigo-500 text-white font-semibold transition-transform duration-200 transform hover:scale-105 hover:bg-indigo-600">Start</button>
+                        <button id="youtube-stop-btn" class="px-6 py-2 rounded-full bg-gray-200 text-gray-700 font-semibold transition-transform duration-200 transform hover:scale-105 hover:bg-gray-300">Stop & Log</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Time is logged to the Galaxy Plan on "Stop & Log".</p>
+                </div>
+
+                <!-- Reminders -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-inner">
+                    <h3 class="text-xl font-bold mb-2 text-center text-gray-800">Set a Reminder</h3>
+                    <p class="text-sm text-gray-500 mb-4 text-center">Set a quick notification to keep you on track.</p>
+                    <div class="flex flex-col space-y-4">
+                        <input type="text" id="reminder-input" placeholder="e.g., 'Take a quick break'" class="p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <div class="flex items-center space-x-2">
+                            <label for="reminder-time-input" class="text-sm text-gray-700">Remind in (min):</label>
+                            <input type="number" id="reminder-time-input" value="10" min="1" class="w-16 text-center p-2 rounded-lg border border-gray-300">
+                            <button id="set-reminder-btn" class="flex-1 px-6 py-2 rounded-xl bg-purple-500 text-white font-semibold transition-transform duration-200 transform hover:scale-105 hover:bg-purple-600">Set</button>
+                        </div>
+                    </div>
+                    <p id="reminder-status" class="text-center text-sm mt-4 text-gray-500"></p>
+                </div>
+            </div>
+            <!-- Quote -->
+            <div class="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-6 rounded-xl shadow-lg text-center mt-8">
+                <p id="quote-text" class="italic text-lg text-shadow">"Success is the sum of small efforts, repeated day in and day out."</p>
+            </div>
+            <!-- Sound Toggle -->
+            <div class="flex items-center justify-center mt-4">
+                <label for="sound-toggle" class="mr-2 text-gray-700">Sound Notifications:</label>
+                <input type="checkbox" id="sound-toggle" class="h-6 w-6 rounded-md text-indigo-600 focus:ring-indigo-500">
+            </div>
+        </div>
+        
+        <!-- Galaxy Plan Page -->
+        <div id="galaxy-plan-page" class="page hidden space-y-8">
+            <h2 class="text-3xl font-bold text-center text-gray-800">CK Sir Study Plan (Galaxy)</h2>
+            <p class="text-center text-gray-500">Track your daily study progress and earn your stars!</p>
+            
+            <!-- Star Key -->
+            <div class="p-4 bg-yellow-50 rounded-xl shadow-inner border border-yellow-200">
+                <h3 class="text-xl font-semibold mb-2 text-gray-800">Star Key (Daily Study Time)</h3>
+                <ul class="space-y-1 text-sm grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <li class="flex items-center"><span class="text-red-500 text-lg mr-2">★</span> &lt; 2 hours</li>
+                    <li class="flex items-center"><span class="text-orange-500 text-lg mr-2">★</span> 3 - 4 hours</li>
+                    <li class="flex items-center"><span class="text-yellow-500 text-lg mr-2">★</span> 5 hours</li>
+                    <li class="flex items-center"><span class="text-blue-500 text-lg mr-2">★</span> 6+ hours</li>
+                </ul>
+            </div>
+
+            <!-- Daily Study Chart Container -->
+            <div id="daily-study-chart-container" class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                <h3 class="text-2xl font-bold mb-4 text-gray-700 text-center">Daily Study Chart (Last 30 Days)</h3>
+                <div class="relative" style="height: 40vh;">
+                    <canvas id="study-line-chart"></canvas>
+                </div>
+            </div>
+            
+            <p class="text-center text-sm text-gray-500 mt-4">Note: Time logged is cumulative from Pomodoro and YouTube Study Timer.</p>
+        
+            <!-- Weekly/Monthly Summary -->
+            <div id="progress-summary" class="mt-8 bg-gray-50 p-6 rounded-xl shadow-inner">
+                <h3 class="text-2xl font-bold mb-4 text-gray-700 text-center">Progress Summary</h3>
+                <div id="summary-content" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <!-- Summary data will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Manual Time Entry -->
+            <div class="mt-8 bg-gray-50 p-6 rounded-xl shadow-inner">
+                <h3 class="text-2xl font-bold mb-4 text-gray-700 text-center">Manually Add Study Time</h3>
+                <div class="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4">
+                    <input type="date" id="manual-date-input" class="p-3 rounded-lg border border-gray-300">
+                    <input type="number" id="manual-time-input" placeholder="Minutes" class="p-3 rounded-lg border border-gray-300">
+                    <button id="add-manual-time-btn" class="px-6 py-3 rounded-xl bg-blue-500 text-white font-semibold transition-transform duration-200 transform hover:scale-105 hover:bg-blue-600">
+                        Add Time
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW Scheduler Page -->
+        <div id="scheduler-page" class="page hidden space-y-8">
+            <h2 class="text-3xl font-bold text-center text-gray-800">Class & Subject Scheduler</h2>
+            <p class="text-center text-gray-500">Define your classes and set an optional study star goal for each.</p>
+
+            <!-- Subject Input Form -->
+            <div class="bg-indigo-50 p-6 rounded-xl shadow-inner border border-indigo-200">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Add a New Subject</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <!-- Subject Name -->
+                    <div class="md:col-span-2">
+                        <label for="subject-name-input" class="block text-sm font-medium text-gray-700 mb-1">Subject Name:</label>
+                        <input type="text" id="subject-name-input" placeholder="e.g., Mathematics" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <!-- Class Time -->
+                    <div>
+                        <label for="class-time-input" class="block text-sm font-medium text-gray-700 mb-1">Class Time:</label>
+                        <input type="time" id="class-time-input" value="10:00" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <!-- Class Duration -->
+                    <div>
+                        <label for="class-duration-input" class="block text-sm font-medium text-gray-700 mb-1">Duration (min):</label>
+                        <input type="number" id="class-duration-input" value="60" min="1" class="w-full p-3 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <!-- Days of the Week -->
+                    <div class="md:col-span-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Days of the Week:</label>
+                        <div id="days-of-week-selector" class="flex flex-wrap gap-2">
+                            <!-- Day buttons will be injected here -->
+                        </div>
+                    </div>
+                    <!-- Star Goal (Optional) -->
+                    <div class="md:col-span-4">
+                        <label for="star-goal-select" class="block text-sm font-medium text-gray-700 mb-1">Study Goal (Optional):</label>
+                        <select id="star-goal-select" class="w-full p-3 rounded-lg border border-gray-300 bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="None">-- Select Goal --</option>
+                            <option value="Red" class="text-red-500">★ Red Star (&lt; 2 hours)</option>
+                            <option value="Orange" class="text-orange-500">★ Orange Star (3-4 hours)</option>
+                            <option value="Yellow" class="text-yellow-500">★ Yellow Star (5 hours)</option>
+                            <option value="Blue" class="text-blue-500">★ Blue Star (6+ hours)</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Add Button -->
+                <button id="add-subject-btn" class="w-full mt-4 px-6 py-3 rounded-xl bg-indigo-500 text-white font-semibold transition-transform duration-200 transform hover:scale-[1.01] hover:bg-indigo-600 shadow-md">
+                    Add Subject to Schedule
+                </button>
+            </div>
+
+            <!-- Subject List Display -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                <h3 class="text-2xl font-bold mb-4 text-gray-700 text-center">Your Active Subjects</h3>
+                <div id="subjects-list" class="space-y-4">
+                    <p id="no-subjects-message" class="text-center text-gray-500 py-4">No subjects added yet.</p>
+                    <!-- Subjects will be rendered here -->
+                </div>
+            </div>
+        </div>
+        
+    </div> <!-- End Main App Container -->
+    
+    <!-- NEW Footer -->
+    <footer class="mt-8 text-center text-sm text-gray-500">
+        CK Sir Study Plan (Galaxy)
+    </footer>
+
+    <audio id="work-sound" src="https://www.soundjay.com/buttons/sounds/button-1.mp3" preload="auto"></audio>
+    <audio id="break-sound" src="https://www.soundjay.com/buttons/sounds/button-2.mp3" preload="auto"></audio>
+
+    <!-- JavaScript for Functionality -->
+    <script>
+        // --- IndexedDB Helper ---
+        const dbHelper = {
+            db: null,
+            initDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('FocusPalDB', 1);
+
+                    request.onupgradeneeded = (event) => {
+                        this.db = event.target.result;
+                        if (!this.db.objectStoreNames.contains('appState')) {
+                            this.db.createObjectStore('appState', { keyPath: 'id' });
+                        }
+                    };
+
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve();
+                    };
+
+                    request.onerror = (event) => {
+                        console.error('IndexedDB error:', event.target.errorCode);
+                        reject(event.target.errorCode);
+                    };
+                });
+            },
+            saveStateToDB(state) {
+                return new Promise((resolve, reject) => {
+                    if (!this.db) {
+                        reject('DB not initialized');
+                        return;
+                    }
+                    const transaction = this.db.transaction(['appState'], 'readwrite');
+                    const store = transaction.objectStore('appState');
+                    const stateToSave = { ...state, id: 'main' }; // Use a fixed key
+                    const request = store.put(stateToSave);
+
+                    request.onsuccess = () => resolve();
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            },
+            loadStateFromDB() {
+                return new Promise((resolve, reject) => {
+                    if (!this.db) {
+                        reject('DB not initialized');
+                        return;
+                    }
+                    const transaction = this.db.transaction(['appState'], 'readonly');
+                    const store = transaction.objectStore('appState');
+                    const request = store.get('main');
+
+                    request.onsuccess = (event) => {
+                        resolve(event.target.result || null);
+                    };
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            }
+        };
+
+        const STAR_GOALS = {
+            'Red': { icon: '★', color: 'text-red-500', minMinutes: 0, maxMinutes: 119, description: '< 2 hours' },
+            'Orange': { icon: '★', color: 'text-orange-500', minMinutes: 180, maxMinutes: 299, description: '3-4 hours' },
+            'Yellow': { icon: '★', color: 'text-yellow-500', minMinutes: 300, maxMinutes: 359, description: '5 hours' },
+            'Blue': { icon: '★', color: 'text-blue-500', minMinutes: 360, maxMinutes: Infinity, description: '6+ hours' },
+            'None': { icon: '•', color: 'text-gray-400', minMinutes: 0, maxMinutes: 0, description: 'No specific goal' }
+        };
+
+        const state = {
+            workDuration: 25,
+            breakDuration: 5,
+            time: 25 * 60,
+            isActive: false,
+            isWorking: true,
+            timerEndTime: null,
+            sessionsCompleted: 0,
+            points: 0,
+            streak: 0,
+            lastUsedDate: null,
+            tasks: [],
+            youtubeTime: 0,
+            isYoutubeTimerActive: false,
+            youtubeTimerStartTime: null,
+            dailyStudyLog: {},
+            subjects: [], // Array to store subject data
+            soundEnabled: false,
+            level: 1,
+            xp: 0,
+        };
+
+        let interval;
+        let youtubeInterval;
+        let reminderTimeout;
+        let chartInstance = null; // To hold the chart instance
+        
+        // DOM elements
+        const soundToggle = document.getElementById('sound-toggle');
+        const workSound = document.getElementById('work-sound');
+        const breakSound = document.getElementById('break-sound');
+        const manualDateInput = document.getElementById('manual-date-input');
+        const manualTimeInput = document.getElementById('manual-time-input');
+        const addManualTimeBtn = document.getElementById('add-manual-time-btn');
+        const timerDisplay = document.getElementById('timer-display');
+        const sessionLabel = document.getElementById('session-label');
+        const startPauseBtn = document.getElementById('start-pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const workDurationInput = document.getElementById('work-duration');
+        const breakDurationInput = document.getElementById('break-duration');
+        const sessionsCompletedEl = document.getElementById('sessions-completed');
+        const pointsEarnedEl = document.getElementById('points-earned');
+        const streakEl = document.getElementById('streak');
+        const statusText = document.getElementById('status-text');
+        const newTaskInput = document.getElementById('new-task-input');
+        const addTaskBtn = document.getElementById('add-task-btn');
+        const taskList = document.getElementById('task-list');
+        const quoteText = document.getElementById('quote-text');
+        const youtubeTimerDisplay = document.getElementById('youtube-timer-display');
+        const youtubeStartBtn = document.getElementById('youtube-start-btn');
+        const youtubeStopBtn = document.getElementById('youtube-stop-btn');
+        const reminderInput = document.getElementById('reminder-input');
+        const reminderTimeInput = document.getElementById('reminder-time-input');
+        const setReminderBtn = document.getElementById('set-reminder-btn');
+        const reminderStatus = document.getElementById('reminder-status');
+        const customMessageBox = document.getElementById('custom-message');
+        
+        // Scheduler DOM elements
+        const subjectNameInput = document.getElementById('subject-name-input');
+        const classTimeInput = document.getElementById('class-time-input');
+        const classDurationInput = document.getElementById('class-duration-input');
+        const starGoalSelect = document.getElementById('star-goal-select');
+        const addSubjectBtn = document.getElementById('add-subject-btn');
+        const subjectsList = document.getElementById('subjects-list');
+        const noSubjectsMessage = document.getElementById('no-subjects-message');
+        const daysOfWeekSelector = document.getElementById('days-of-week-selector');
+        
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const pages = document.querySelectorAll('.page');
+
+        // Motivational quotes
+        const quotes = [
+            "The best way to predict your future is to create it.",
+            "Success is the sum of small efforts, repeated day in and day out.",
+            "You don't have to be great to start, but you have to start to be great.",
+            "The expert in anything was once a beginner.",
+            "Believe you can and you're halfway there.",
+            "The secret of getting ahead is getting started.",
+            "The only way to do great work is to love what you do."
+        ];
+        
+        // Helper to get today's date string (YYYY-MM-DD)
+        function getTodayDateString() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Functions
+        function getXpForNextLevel() {
+            // Progressive difficulty: e.g., 1000, 1500, 2250, ...
+            return Math.floor(1000 * Math.pow(1.5, state.level - 1));
+        }
+
+        function checkLevelUp() {
+            const xpForNextLevel = getXpForNextLevel();
+            if (state.xp >= xpForNextLevel) {
+                state.level++;
+                state.xp -= xpForNextLevel; // Keep the remainder XP
+                showMessage(`Congratulations! You've reached Level ${state.level}!`, 'success');
+                checkLevelUp(); // Check again in case of multiple level-ups
+            }
+        }
+
+        function addXP(amount) {
+            if (amount <= 0) return;
+            state.xp += amount;
+            checkLevelUp();
+            updateDisplay(); // Update UI to reflect potential level/XP changes
+            saveState();
+        }
+
+        async function saveState() {
+            const stateToSave = {
+                workDuration: state.workDuration,
+                breakDuration: state.breakDuration,
+                time: state.time,
+                isActive: state.isActive,
+                isWorking: state.isWorking,
+                sessionsCompleted: state.sessionsCompleted,
+                points: state.points,
+                streak: state.streak,
+                lastUsedDate: state.lastUsedDate,
+                tasks: state.tasks,
+                youtubeTime: state.youtubeTime,
+                isYoutubeTimerActive: state.isYoutubeTimerActive,
+                dailyStudyLog: state.dailyStudyLog,
+                subjects: state.subjects.map(s => ({ ...s, days: Array.from(s.days) })),
+                soundEnabled: state.soundEnabled,
+                level: state.level,
+                xp: state.xp,
+            };
+            try {
+                await dbHelper.saveStateToDB(stateToSave);
+            } catch (error) {
+                console.error("Failed to save state to DB:", error);
+            }
+        }
+
+        async function loadState() {
+            try {
+                const savedState = await dbHelper.loadStateFromDB();
+                if (savedState) {
+                    state.sessionsCompleted = savedState.sessionsCompleted || 0;
+                    state.points = savedState.points || 0;
+                    state.streak = savedState.streak || 0;
+                    state.lastUsedDate = savedState.lastUsedDate || null;
+                    state.tasks = savedState.tasks || [];
+                    state.youtubeTime = savedState.youtubeTime || 0;
+                    state.isYoutubeTimerActive = savedState.isYoutubeTimerActive || false;
+                    state.dailyStudyLog = savedState.dailyStudyLog || {};
+                    state.subjects = savedState.subjects ? savedState.subjects.map(s => ({ ...s, days: new Set(s.days) })) : [];
+                    state.soundEnabled = savedState.soundEnabled || false;
+                    state.isActive = savedState.isActive || false;
+                    state.time = savedState.time || 25 * 60;
+                    state.isWorking = savedState.isWorking !== undefined ? savedState.isWorking : true;
+                    state.level = savedState.level || 1;
+                    state.xp = savedState.xp || 0;
+                    soundToggle.checked = state.soundEnabled;
+                    
+                    // Compatibility for older data
+                    state.subjects.forEach(s => {
+                        if (s.duration === undefined) s.duration = 60;
+                        if (s.days === undefined) s.days = new Set();
+                    });
+
+                    if (state.isActive) {
+                        // Manually start timer without toggling state
+                        startPauseBtn.textContent = 'Pause';
+                        startPauseBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                        startPauseBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                        interval = setInterval(updateTimer, 1000);
+                    }
+                    if (state.isYoutubeTimerActive) {
+                        // Manually start youtube timer without toggling state
+                        youtubeStartBtn.textContent = 'Pause';
+                        youtubeStartBtn.classList.remove('bg-indigo-500', 'hover:bg-indigo-600');
+                        youtubeStartBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                        youtubeInterval = setInterval(() => {
+                            state.youtubeTime++;
+                            updateYoutubeTimerDisplay();
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load state from DB:", error);
+            } finally {
+                // Always update the display after attempting to load state
+                updateDisplay();
+                renderTasks();
+                updateYoutubeTimerDisplay();
+                renderGalaxyPlan();
+                renderSubjects(); // NEW: Render subjects on load
+            }
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            const pad = (num) => num.toString().padStart(2, '0');
+            return `${pad(minutes)}:${pad(remainingSeconds)}`;
+        }
+        
+        function updateYoutubeTimerDisplay() {
+            youtubeTimerDisplay.textContent = formatTime(state.youtubeTime);
+        }
+
+        function updateLevelDisplay() {
+            const levelDisplay = document.getElementById('level-display');
+            const xpDisplay = document.getElementById('xp-display');
+            const xpNextLevelDisplay = document.getElementById('xp-next-level-display');
+            const xpProgressBar = document.getElementById('xp-progress-bar');
+            
+            const xpForNextLevel = getXpForNextLevel();
+            const progressPercentage = (state.xp / xpForNextLevel) * 100;
+
+            levelDisplay.textContent = state.level;
+            xpDisplay.textContent = state.xp;
+            xpNextLevelDisplay.textContent = xpForNextLevel;
+            xpProgressBar.style.width = `${progressPercentage}%`;
+        }
+
+        function updateDisplay() {
+            timerDisplay.textContent = formatTime(state.time);
+            sessionsCompletedEl.textContent = state.sessionsCompleted;
+            pointsEarnedEl.textContent = state.points;
+            streakEl.textContent = state.streak;
+            sessionLabel.textContent = state.isWorking ? 'Work Session' : 'Break Session';
+            statusText.textContent = state.isWorking ? "Time to focus!" : "Take a well-deserved break.";
+            updateLevelDisplay();
+        }
+
+        function toggleTimer() {
+            state.isActive = !state.isActive;
+            if (state.isActive) {
+                // If starting, set the end time. If resuming, adjust end time for the pause.
+                if (state.timerEndTime === null) {
+                    state.timerEndTime = Date.now() + state.time * 1000;
+                } else {
+                    // This logic assumes `state.time` holds the remaining seconds when paused.
+                    state.timerEndTime = Date.now() + state.time * 1000;
+                }
+                
+                startPauseBtn.textContent = 'Pause';
+                startPauseBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                startPauseBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                interval = setInterval(updateTimer, 100); // Update more frequently
+            } else {
+                // When pausing, we don't clear the end time, just the interval.
+                // The remaining time is calculated and stored in updateTimer before this.
+                startPauseBtn.textContent = 'Start';
+                startPauseBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                startPauseBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                clearInterval(interval);
+            }
+            saveState();
+        }
+
+        function resetTimer() {
+            clearInterval(interval);
+            state.isActive = false;
+            state.isWorking = true;
+            state.time = state.workDuration * 60;
+            state.timerEndTime = null; // Reset end time
+            startPauseBtn.textContent = 'Start';
+            startPauseBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+            startPauseBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            updateDisplay();
+            saveState(); // Persist the reset state
+        }
+
+        function updateTimer() {
+            const remaining = state.timerEndTime - Date.now();
+            state.time = Math.round(remaining / 1000);
+
+            if (state.time <= 0) {
+                state.time = 0;
+                handleSessionEnd();
+            }
+            updateDisplay();
+        }
+        
+        function handleSessionEnd() {
+            clearInterval(interval);
+            if (state.isWorking) {
+                state.sessionsCompleted++;
+                state.points += 100;
+                updateStreak();
+                
+                // Log study time from Pomodoro
+                const today = getTodayDateString();
+                const minutesCompleted = state.workDuration;
+                
+                if (!state.dailyStudyLog[today]) {
+                    state.dailyStudyLog[today] = 0;
+                }
+                state.dailyStudyLog[today] += minutesCompleted;
+                
+                addXP(minutesCompleted); // Award 1 XP per minute of study
+                
+                state.isWorking = false;
+                state.time = state.breakDuration * 60;
+                if (state.soundEnabled) breakSound.play();
+                speakNudge("Great job! You finished a study session. Time for a break.");
+            } else {
+                state.isWorking = true;
+                state.time = state.workDuration * 60;
+                if (state.soundEnabled) workSound.play();
+                speakNudge("Break's over! Let's get back to work.");
+            }
+            state.isActive = false;
+            toggleTimer();
+            saveState();
+            renderGalaxyPlan(); // Update the chart
+        }
+
+        function updateStreak() {
+            const today = new Date().toDateString();
+            if (state.lastUsedDate === today) {
+                // Do nothing
+            } else if (state.lastUsedDate) {
+                const lastDate = new Date(state.lastUsedDate);
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                if (lastDate.toDateString() === yesterday.toDateString()) {
+                    state.streak++;
+                } else {
+                    state.streak = 1;
+                }
+            } else {
+                state.streak = 1;
+            }
+            state.lastUsedDate = today;
+            saveState();
+        }
+
+        function speakNudge(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+            state.tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = `flex items-center justify-between p-3 rounded-xl border border-gray-200 transition-all duration-200 ${task.completed ? 'bg-green-100 text-gray-500 line-through' : 'bg-white text-gray-800'}`;
+                li.innerHTML = `
+                    <span class="flex-1 mr-2">${task.text}</span>
+                    <div class="flex items-center space-x-2 flex-shrink-0">
+                        <button class="edit-task-btn p-1 rounded-full text-blue-500 hover:text-blue-700 transition-colors" title="Edit topic">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z"></path></svg>
+                        </button>
+                        <button class="complete-task-btn p-1 rounded-full text-green-500 hover:text-green-700 transition-colors" title="Complete topic">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                        <button class="delete-task-btn p-1 rounded-full text-red-500 hover:text-red-700 transition-colors" title="Delete topic">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+
+                li.querySelector('.edit-task-btn').addEventListener('click', () => {
+                    // Using prompt as a simple modal replacement
+                    const newText = prompt('Edit your topic:', task.text); 
+                    if (newText !== null && newText.trim() !== '') {
+                        state.tasks[index].text = newText.trim();
+                        saveState();
+                        renderTasks();
+                    }
+                });
+
+                li.querySelector('.complete-task-btn').addEventListener('click', () => {
+                    if (!state.tasks[index].completed) {
+                        state.tasks[index].completed = true;
+                        state.points += 50; // Award points for completing a task
+                        addXP(50); // Award 50 XP for completing a task
+                        saveState();
+                        renderTasks();
+                    }
+                });
+                li.querySelector('.delete-task-btn').addEventListener('click', () => {
+                    state.tasks.splice(index, 1);
+                    saveState();
+                    renderTasks();
+                });
+                taskList.appendChild(li);
+            });
+        }
+        
+        function changeQuote() {
+            const randomIndex = Math.floor(Math.random() * quotes.length);
+            quoteText.textContent = `"${quotes[randomIndex]}"`;
+        }
+        
+        function toggleYoutubeTimer() {
+            state.isYoutubeTimerActive = !state.isYoutubeTimerActive;
+            if (state.isYoutubeTimerActive) {
+                // Starting the timer
+                if (state.youtubeTimerStartTime === null) {
+                    state.youtubeTimerStartTime = Date.now();
+                }
+                youtubeStartBtn.textContent = 'Pause';
+                youtubeStartBtn.classList.remove('bg-indigo-500', 'hover:bg-indigo-600');
+                youtubeStartBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                
+                youtubeInterval = setInterval(() => {
+                    const elapsed = Date.now() - state.youtubeTimerStartTime;
+                    state.youtubeTime = Math.round(elapsed / 1000);
+                    updateYoutubeTimerDisplay();
+                }, 100);
+            } else {
+                // Pausing the timer
+                youtubeStartBtn.textContent = 'Start';
+                youtubeStartBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                youtubeStartBtn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+                clearInterval(youtubeInterval);
+            }
+            saveState();
+        }
+        
+        function stopYoutubeTimer() {
+            if (state.isYoutubeTimerActive || state.youtubeTime > 0) {
+                const elapsed = state.isYoutubeTimerActive ? (Date.now() - state.youtubeTimerStartTime) : (state.youtubeTime * 1000);
+                const minutesCompleted = Math.floor(elapsed / 60000);
+
+                if (minutesCompleted > 0) {
+                    // Log study time from YouTube Timer
+                    const today = getTodayDateString();
+                    if (!state.dailyStudyLog[today]) {
+                        state.dailyStudyLog[today] = 0;
+                    }
+                    state.dailyStudyLog[today] += minutesCompleted;
+                    state.points += minutesCompleted; // Award 1 point per minute of YouTube study logged
+                    addXP(minutesCompleted); // Award 1 XP per minute
+                    showMessage(`${minutesCompleted} minutes of YouTube study logged!`, 'success');
+                    renderGalaxyPlan(); // Update the chart
+                }
+            }
+            
+            clearInterval(youtubeInterval);
+            state.isYoutubeTimerActive = false;
+            state.youtubeTime = 0;
+            state.youtubeTimerStartTime = null;
+            youtubeStartBtn.textContent = 'Start';
+            youtubeStartBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+            youtubeStartBtn.classList.add('bg-indigo-500', 'hover:bg-indigo-600');
+            updateYoutubeTimerDisplay();
+            saveState();
+        }
+        
+        function showMessage(message, type = 'success') {
+            customMessageBox.textContent = message;
+            customMessageBox.style.backgroundColor = type === 'success' ? '#4CAF50' : '#F44336';
+            customMessageBox.classList.add('show');
+            setTimeout(() => {
+                customMessageBox.classList.remove('show');
+            }, 3000);
+        }
+
+        function setReminder() {
+            const reminderMessage = reminderInput.value.trim();
+            const reminderMinutes = parseInt(reminderTimeInput.value, 10);
+            
+            if (reminderMessage && reminderMinutes > 0) {
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission();
+                }
+
+                reminderStatus.textContent = `Reminder set for ${reminderMinutes} minutes.`;
+                clearTimeout(reminderTimeout);
+                reminderTimeout = setTimeout(() => {
+                    if (Notification.permission === 'granted') {
+                        new Notification('FocusPal Reminder', {
+                            body: reminderMessage,
+                            icon: 'https://placehold.co/100x100/A855F7/FFFFFF?text=FP'
+                        });
+                    } else {
+                        speakNudge(`Reminder: ${reminderMessage}`);
+                        showMessage(`Reminder: ${reminderMessage}`, 'success');
+                    }
+                    reminderStatus.textContent = '';
+                }, reminderMinutes * 60 * 1000);
+
+            } else {
+                reminderStatus.textContent = "Please enter a message and a valid time.";
+            }
+        }
+
+        function showPage(pageId) {
+            pages.forEach(page => page.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
+            
+            navBtns.forEach(btn => {
+                btn.classList.remove('bg-gray-400', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                
+                if (btn.dataset.page + '-page' === pageId) {
+                    btn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                    btn.classList.add('bg-gray-400', 'text-white');
+                }
+            });
+            
+            if (pageId === 'galaxy-plan-page') {
+                renderGalaxyPlan();
+                renderProgressSummary();
+            } else if (pageId === 'scheduler-page') {
+                renderSubjects();
+            }
+        }
+
+        // Galaxy Plan Logic
+        function getStarRating(minutes) {
+            const hours = minutes / 60;
+            let starColor = 'text-gray-400';
+            let description = 'No time logged';
+            let starIcon = '☆';
+            
+            // Star criteria:
+            // 1. Blue Star: 6h or more (360+ mins)
+            if (hours >= 6) {
+                starColor = 'text-blue-500'; 
+                description = 'Galaxy Achiever! (6h+)';
+                starIcon = '★';
+            // 2. Yellow Star: 5h (300 - <360 mins)
+            } else if (hours >= 5) {
+                starColor = 'text-yellow-500'; 
+                description = 'Great Job! (5h)';
+                starIcon = '★';
+            // 3. Orange Star: 3h-4h (180 - <300 mins)
+            } else if (hours >= 3) {
+                starColor = 'text-orange-500'; 
+                description = 'Solid Effort! (3h - 4h)';
+                starIcon = '★';
+            // 4. Red Star: Less than 2h (0 - <120 mins)
+            } else if (hours > 0 && hours < 2) { 
+                starColor = 'text-red-500'; 
+                description = 'Needs Focus (<2h)';
+                starIcon = '★';
+            // Custom: 2h to <3h is treated as Orange tier for encouragement
+            } else if (hours >= 2 && hours < 3) {
+                starColor = 'text-orange-500';
+                description = 'Getting There! (2h - <3h)';
+                starIcon = '★';
+            }
+            
+            return { starIcon, starColor, description };
+        }
+        
+        function renderGalaxyPlan() {
+            const ctx = document.getElementById('study-line-chart').getContext('2d');
+            
+            // Destroy previous chart instance if it exists
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const today = new Date();
+            const labels = [];
+            const studyData = [];
+            
+            const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const date = new Date(today.getFullYear(), today.getMonth(), i);
+                const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                studyData.push(state.dailyStudyLog[dateKey] || 0);
+            }
+
+            const subjectDatasets = state.subjects.map((subject, index) => {
+                const goalData = [];
+                const colors = ['rgba(255, 99, 132, 0.5)', 'rgba(54, 162, 235, 0.5)', 'rgba(255, 206, 86, 0.5)', 'rgba(75, 192, 192, 0.5)', 'rgba(153, 102, 255, 0.5)', 'rgba(255, 159, 64, 0.5)'];
+                const color = colors[index % colors.length];
+
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const date = new Date(today.getFullYear(), today.getMonth(), i);
+                    const dayOfWeek = date.getDay();
+                    if (subject.days.has(dayOfWeek)) {
+                        goalData.push(subject.duration);
+                    } else {
+                        goalData.push(0);
+                    }
+                }
+
+                return {
+                    label: `${subject.name} Goal`,
+                    data: goalData,
+                    borderColor: color,
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.1
+                };
+            });
+
+            const starColors = {
+                'Blue': 'rgba(59, 130, 246, 1)',
+                'Yellow': 'rgba(253, 224, 71, 1)',
+                'Orange': 'rgba(251, 146, 60, 1)',
+                'Red': 'rgba(239, 68, 68, 1)',
+                'None': 'rgba(156, 163, 175, 1)'
+            };
+            
+            const pointColors = studyData.map(minutes => {
+                const rating = getStarRating(minutes);
+                if (rating.starIcon === '★') {
+                    if (rating.starColor.includes('blue')) return starColors.Blue;
+                    if (rating.starColor.includes('yellow')) return starColors.Yellow;
+                    if (rating.starColor.includes('orange')) return starColors.Orange;
+                    if (rating.starColor.includes('red')) return starColors.Red;
+                }
+                return starColors.None;
+            });
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        ...subjectDatasets,
+                        {
+                            label: 'Time Studied (minutes)',
+                            data: studyData,
+                            borderColor: pointColors,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            pointBackgroundColor: pointColors,
+                            pointBorderColor: pointColors,
+                            pointStyle: 'star',
+                            pointRadius: 10,
+                            pointHoverRadius: 12,
+                            fill: true,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Minutes Studied'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label === 'Time Studied (minutes)') {
+                                        const minutes = context.parsed.y;
+                                        const rating = getStarRating(minutes);
+                                        return `${label}: ${minutes} minutes (${rating.description})`;
+                                    }
+                                    return `${label}: ${context.parsed.y} minutes`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderProgressSummary() {
+            const summaryContent = document.getElementById('summary-content');
+            const now = new Date();
+            const today = now.getDay(); // 0 = Sunday, 6 = Saturday
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            // Weekly Stats
+            let weeklyTotal = 0;
+            let daysThisWeek = 0;
+            for (let i = 0; i < 7; i++) {
+                const date = new Date();
+                date.setDate(now.getDate() - today + i);
+                const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                if (state.dailyStudyLog[dateKey]) {
+                    weeklyTotal += state.dailyStudyLog[dateKey];
+                    daysThisWeek++;
+                }
+            }
+            const weeklyAverage = daysThisWeek > 0 ? (weeklyTotal / daysThisWeek).toFixed(0) : 0;
+
+            // Monthly Stats
+            let monthlyTotal = 0;
+            let daysThisMonth = 0;
+            let mostProductiveDay = { date: null, time: 0 };
+
+            for (const dateKey in state.dailyStudyLog) {
+                const date = new Date(dateKey);
+                if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+                    const time = state.dailyStudyLog[dateKey];
+                    monthlyTotal += time;
+                    daysThisMonth++;
+                    if (time > mostProductiveDay.time) {
+                        mostProductiveDay = { date: dateKey, time: time };
+                    }
+                }
+            }
+            const monthlyAverage = daysThisMonth > 0 ? (monthlyTotal / daysThisMonth).toFixed(0) : 0;
+
+            summaryContent.innerHTML = `
+                <div>
+                    <p class="text-4xl font-bold text-indigo-600">${(weeklyTotal / 60).toFixed(1)}h</p>
+                    <p class="text-gray-500 text-sm mt-1">This Week</p>
+                </div>
+                <div>
+                    <p class="text-4xl font-bold text-green-600">${(monthlyTotal / 60).toFixed(1)}h</p>
+                    <p class="text-gray-500 text-sm mt-1">This Month</p>
+                </div>
+                <div>
+                    <p class="text-4xl font-bold text-purple-600">${monthlyAverage} min</p>
+                    <p class="text-gray-500 text-sm mt-1">Daily Average (Month)</p>
+                </div>
+            `;
+        }
+        
+        // Scheduler Functions
+        function addSubject() {
+            const name = subjectNameInput.value.trim();
+            const time = classTimeInput.value;
+            const duration = parseInt(classDurationInput.value, 10) || 60;
+            const goal = starGoalSelect.value;
+            const selectedDays = new Set(Array.from(daysOfWeekSelector.querySelectorAll('.day-btn.bg-indigo-600')).map(btn => parseInt(btn.dataset.day, 10)));
+
+            if (!name) {
+                showMessage("Please enter a subject name.", 'error');
+                return;
+            }
+
+            const newSubject = {
+                id: Date.now(),
+                name: name,
+                time: time,
+                duration: duration,
+                starGoal: goal,
+                days: selectedDays, // e.g., [1, 3, 5] for Mon, Wed, Fri
+            };
+
+            state.subjects.push(newSubject);
+            saveState();
+            renderSubjects();
+
+            subjectNameInput.value = '';
+            classDurationInput.value = '60';
+            starGoalSelect.value = 'None';
+            daysOfWeekSelector.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('bg-indigo-600', 'text-white'));
+            showMessage(`${name} added to your schedule!`, 'success');
+        }
+
+        function renderSubjects() {
+            if (state.subjects.length === 0) {
+                subjectsList.innerHTML = `<p id="no-subjects-message" class="text-center text-gray-500 py-4">No subjects added yet.</p>`;
+                return;
+            }
+
+            subjectsList.innerHTML = ''; // Clear the list before rendering
+
+            state.subjects.forEach(subject => {
+                const goalData = STAR_GOALS[subject.starGoal] || STAR_GOALS['None'];
+                const goalMinutes = goalData.minMinutes > 0 ? `Target: ${goalData.description}` : 'No Study Goal Set';
+                const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const subjectDays = subject.days ? Array.from(subject.days).map(d => daysOfWeek[d]).join(', ') : '';
+
+                const subjectElement = document.createElement('div');
+                subjectElement.className = "flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-gray-50 rounded-xl border-l-4 border-indigo-400 shadow-sm hover:shadow-md transition-shadow";
+                
+                subjectElement.innerHTML = `
+                    <div class="flex-1 min-w-0 mb-2 md:mb-0">
+                        <h4 class="text-xl font-bold text-gray-800 truncate">${subject.name}</h4>
+                        <p class="text-sm text-gray-500">Class Time: ${subject.time} (${subject.duration} min) on ${subjectDays}</p>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3 flex-shrink-0">
+                        <div class="flex items-center space-x-1 p-2 rounded-full bg-white border border-gray-200">
+                            <span class="text-lg font-bold ${goalData.color}">${goalData.icon}</span>
+                            <span class="text-sm font-medium text-gray-700">${goalMinutes}</span>
+                        </div>
+                        <button data-subject-id="${subject.id}" class="delete-subject-btn p-2 rounded-full text-red-500 hover:bg-red-100 transition-colors" title="Delete Subject">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+
+                subjectsList.appendChild(subjectElement);
+            });
+        }
+
+        function populateDaySelector() {
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            days.forEach((day, index) => {
+                const button = document.createElement('button');
+                button.textContent = day;
+                button.dataset.day = index;
+                button.className = 'day-btn px-3 py-1 rounded-full text-sm font-semibold border-2 border-gray-300 text-gray-600 hover:bg-gray-200 transition-colors';
+                daysOfWeekSelector.appendChild(button);
+            });
+
+            daysOfWeekSelector.addEventListener('click', (e) => {
+                if (e.target.classList.contains('day-btn')) {
+                    e.target.classList.toggle('bg-indigo-600');
+                    e.target.classList.toggle('text-white');
+                }
+            });
+        }
+
+
+        // Event Listeners
+        addManualTimeBtn.addEventListener('click', () => {
+            const date = manualDateInput.value;
+            const minutes = parseInt(manualTimeInput.value, 10);
+
+            if (date && minutes > 0) {
+                const dateKey = new Date(date).toISOString().split('T')[0];
+                if (!state.dailyStudyLog[dateKey]) {
+                    state.dailyStudyLog[dateKey] = 0;
+                }
+                state.dailyStudyLog[dateKey] += minutes;
+                addXP(minutes); // Award 1 XP per minute
+                saveState();
+                renderGalaxyPlan();
+                renderProgressSummary();
+                showMessage(`${minutes} minutes added for ${dateKey}!`, 'success');
+            } else {
+                showMessage('Please select a date and enter a valid number of minutes.', 'error');
+            }
+        });
+
+        soundToggle.addEventListener('change', (e) => {
+            state.soundEnabled = e.target.checked;
+            saveState();
+        });
+
+        subjectsList.addEventListener('click', (e) => {
+            const deleteButton = e.target.closest('.delete-subject-btn');
+            if (deleteButton) {
+                const subjectId = parseInt(deleteButton.dataset.subjectId, 10);
+                state.subjects = state.subjects.filter(subject => subject.id !== subjectId);
+                saveState();
+                renderSubjects();
+                showMessage('Subject removed.', 'success');
+            }
+        });
+
+        startPauseBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        workDurationInput.addEventListener('change', (e) => {
+            state.workDuration = parseInt(e.target.value, 10) || 1;
+            if (state.isWorking) {
+                resetTimer();
+            }
+        });
+        breakDurationInput.addEventListener('change', (e) => {
+            state.breakDuration = parseInt(e.target.value, 10) || 1;
+            if (!state.isWorking) {
+                resetTimer();
+            }
+        });
+
+        addTaskBtn.addEventListener('click', () => {
+            const taskText = newTaskInput.value.trim();
+            if (taskText) {
+                state.tasks.push({ text: taskText, completed: false });
+                newTaskInput.value = '';
+                saveState();
+                renderTasks();
+            }
+        });
+        newTaskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addTaskBtn.click();
+            }
+        });
+        
+        youtubeStartBtn.addEventListener('click', toggleYoutubeTimer);
+        youtubeStopBtn.addEventListener('click', stopYoutubeTimer);
+        setReminderBtn.addEventListener('click', setReminder);
+        
+        addSubjectBtn.addEventListener('click', addSubject); // NEW Listener
+
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                showPage(btn.dataset.page + '-page');
+            });
+        });
+        
+        // Initial setup
+        window.addEventListener('load', async () => {
+            try {
+                await dbHelper.initDB();
+                populateDaySelector();
+                await loadState();
+                changeQuote();
+                setInterval(changeQuote, 30000);
+                showPage('dashboard-page');
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                // Fallback or error message to the user
+                document.body.innerHTML = '<div class="text-center p-8">Could not load application data. Please try again.</div>';
+            }
+        });
+        
+    </script>
+</body>
+</html>
